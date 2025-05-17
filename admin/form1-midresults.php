@@ -1,0 +1,404 @@
+<?php
+session_start();
+error_reporting(0);
+include('includes/dbconnection.php');
+
+if (strlen($_SESSION['sturecmsaid']) == 0) {
+    header('location:logout.php');
+    exit();
+} else {
+    // Fetch active academic year and term
+    $sql = "SELECT AcademicYear, ActiveTerm, Term1Start, Term1End, Term2Start, Term2End, Term3Start, Term3End FROM tblcalendar WHERE Status = 'Active'";
+    $query = $dbh->prepare($sql);
+    $query->execute();
+    $result = $query->fetch(PDO::FETCH_ASSOC);
+
+    if ($result) {
+        $academicYear = $result['AcademicYear'];
+        $activeTerm = $result['ActiveTerm'];
+
+        // Check if the active term is valid
+        if ($activeTerm >= 1 && $activeTerm <= 3) {
+            // Determine term start and end dates
+            switch ($activeTerm) {
+                case 1:
+                    $termStartDate = $result['Term1Start'];
+                    $termEndDate = $result['Term1End'];
+                    break;
+                case 2:
+                    $termStartDate = $result['Term2Start'];
+                    $termEndDate = $result['Term2End'];
+                    break;
+                case 3:
+                    $termStartDate = $result['Term3Start'];
+                    $termEndDate = $result['Term3End'];
+                    break;
+            }
+            // Construct academic year message
+            $academicYearMessage = "$academicYear Academic year, Term $activeTerm from $termStartDate to $termEndDate";
+        } else {
+            // Redirect to dashboard with an error message
+            header('location: dashboard.php?error=Invalid active term');
+            exit();
+        }
+    } else {
+        // Redirect to dashboard with an error message
+        header('location: dashboard.php?error=Active academic year not found');
+        exit();
+    }
+}
+?>
+            <!DOCTYPE html>
+            <html lang="en">
+            <head>
+            <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no"><link rel="icon" type="images/ico" href="images/sms.ICO">
+    <link rel="icon" type="image/jpg" href="logo.jpg">            
+    <title>Student Management System</title>
+                <!-- plugins:css -->
+                <link rel="stylesheet" href="vendors/simple-line-icons/css/simple-line-icons.css">
+                <link rel="stylesheet" href="vendors/flag-icon-css/css/flag-icon.min.css">
+                <link rel="stylesheet" href="vendors/css/vendor.bundle.base.css">
+                <!-- endinject -->
+                <!-- Plugin css for this page -->
+                <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+                <link rel="stylesheet" href="vendors/select2/select2.min.css">
+                <link rel="stylesheet" href="vendors/select2-bootstrap-theme/select2-bootstrap.min.css">
+                <!-- End plugin css for this page -->
+                <!-- inject:css -->
+                <!-- endinject -->
+                <!-- Layout styles -->
+    <style>
+        /* Optional: Custom styles for the table */
+        th {
+            background-color: #003366;
+            color: white;
+        }
+    </style>
+                <link rel="stylesheet" href="css/style.css" />
+                <style>
+                    .return-btn {
+                        background-color: #007bff;
+                        color: #fff;
+                        border: none;
+                        padding: 5px 10px;
+                        border-radius: 5px;
+                        cursor: pointer;
+                    }
+                </style>
+            </head>
+            <body>
+            <div class="container-scroller">
+                <!-- partial:partials/_navbar.html -->
+                <?php include_once('includes/header.php');?>
+                <!-- partial -->
+                <div class="container-fluid page-body-wrapper">
+                    <!-- partial:partials/_sidebar.html -->
+                    <?php include_once('includes/sidebar.php');?>
+                    <!-- partial -->
+                    <div class="main-panel">
+                        <div class="content-wrapper">
+                            <div class="page-header">
+                                <h3 class="page-title"> Mid Term <?php echo $activeTerm; ?> results </h3>
+                <!-- Updated button -->
+<button type="button" class="btn" onclick="generatePDF()" 
+        style="display: block; margin: 0 auto; background-color: #003366; color: white; border-radius: 40px; padding: 10px 20px;">
+    <i class="fas fa-download" style="font-size: 20px;"></i>
+</button>
+                <nav aria-label="breadcrumb">
+                        <ol class="breadcrumb">
+                            <li class="breadcrumb-item"><a href="dashboard.php">Dashboard</a></li>
+                            <li class="breadcrumb-item active" aria-current="page">Performance List</li>
+                        </ol>
+                    </nav>
+                </div>
+
+
+
+                <div class="row">
+                    <!-- Search input -->
+                    <div class="col-md-4 offset-md-4 text-center">
+                        <input type="text" id="myInput" class="form-control primary-search" placeholder="Start typing..">
+                    </div>
+
+<!-- Table -->
+                            <div id="pdf-content" class="col-md-12 grid-margin stretch-card">
+    
+                                <div class="col-12 grid-margin stretch-card">
+                                    <div class="card">
+                                        <div class="card-body">
+<div class="container-responsive mt-4">
+    <div class="table-responsive border rounded p-1">
+     <div class="text-center">
+    <img src="images/logo.jpg" alt="Logo" style="width: 15% !important; height: 15% !important;">
+</div>
+    <h5 class="textblue text-center">BISHOP AUNEAU GIRLS CATHOLIC SECONDARY SCHOOL</h5>
+        <h6 class="text-blue text-center">FORM 1 MID TERM RESULTS</h6>
+        <h6 class="text-blue text-center"><?php echo strtoupper($academicYearMessage); ?></h6>
+<div class="table-responsive">
+        <table id="myTable" class="table table-striped table-bordered">
+        
+            <thead>
+                <tr style="background:#003366 !important;">
+                    <th class="font-weight-bold">#</th>
+                    <th class="font-weight-bold">NAME</th>
+                    <th class="font-weight-bold">AGR</th> <!-- Agriculture -->
+                    <th class="font-weight-bold">BIO</th> <!-- Biology -->
+                    <th class="font-weight-bold">B/K</th> <!-- Bible Knowledge -->
+                    <th class="font-weight-bold">CHE</th> <!-- Chemistry -->
+                    <th class="font-weight-bold">CHI</th> <!-- Chichewa -->
+                    <th class="font-weight-bold">COM</th> <!-- Computer Studies -->
+                    <th class="font-weight-bold">ENG</th> <!-- English -->
+                    <th class="font-weight-bold">GEO</th> <!-- Geography -->
+                    <th class="font-weight-bold">MAT</th> <!-- Mathematics -->
+                    <th class="font-weight-bold">PHY</th> <!-- Physics -->
+                    <th class="font-weight-bold">SOC</th> <!-- Social/Life Skills -->
+                    <th class="font-weight-bold">TOTAL</th> <!-- Social/Life Skills -->                    
+                    <th class="font-weight-bold">RESULT</th> <!-- Social/Life Skills -->
+                </tr>
+            </thead>
+            <tbody id="myTable" >
+  <?php
+// SQL query to retrieve distinct student names and their IDs
+$sqlResults = "SELECT DISTINCT s.StudentName, sr.stuID
+               FROM tblmid AS sr
+               JOIN tblstudent AS s ON sr.stuID = s.ID
+               WHERE sr.class = 1"; // Only filtering by class
+
+$queryResults = $dbh->prepare($sqlResults);
+$queryResults->execute();
+
+$results = $queryResults->fetchAll(PDO::FETCH_ASSOC);
+
+// Initialize an array to hold total scores for each student
+$studentTotals = [];
+
+// Output each student's name and calculate total scores
+foreach ($results as $record) {
+    $fullName = $record['StudentName'];
+
+    // Split the name into parts
+    $nameParts = explode(' ', trim($fullName));
+    $lastName = array_pop($nameParts);
+    $firstNames = implode(' ', $nameParts);
+    
+    // Rearrange and convert to uppercase
+    $studentName = strtoupper($lastName) . ' ' . strtoupper($firstNames);
+    $stuID = $record['stuID'];
+
+    // Define an array of subjects with their corresponding LIKE patterns
+    $subjects = [
+        'Agriculture' => '%Agricu%',
+        'Biology' => '%Biolo%',
+        'Bible Knowledge' => '%Bible%',
+        'Chemistry' => '%Chemis%',
+        'Chichewa' => '%Chichewa%',
+        'Computer Studies' => '%Computer%',
+        'English' => '%English%',
+        'Geography' => '%Geograph%',
+        'Mathematics' => '%Mathematics%',
+        'Physics' => '%Physics%',
+        'Social/Life Skills' => '%Social%'
+    ];
+
+    // Initialize an array to hold grades and test scores
+    $grades = [];
+    foreach ($subjects as $subject => $pattern) {
+        // Prepare the query to fetch grade and test1 score for the current subject
+        $sqlSubjectData = "SELECT grade, test1 FROM tblmid 
+                           WHERE stuID = :stuID 
+                           AND academic_year = :academicYear 
+                           AND term = :term 
+                           AND class = 1
+                           AND subname LIKE :subname";
+
+        $querySubject = $dbh->prepare($sqlSubjectData);
+        $querySubject->bindParam(':stuID', $stuID, PDO::PARAM_INT);
+        $querySubject->bindParam(':academicYear', $academicYear, PDO::PARAM_STR);
+        $querySubject->bindParam(':term', $activeTerm, PDO::PARAM_STR);
+        $querySubject->bindValue(':subname', $pattern, PDO::PARAM_STR);
+
+        $querySubject->execute();
+        $subjectData = $querySubject->fetch(PDO::FETCH_ASSOC);
+
+        $grades[$subject] = [
+            'grade' => $subjectData['grade'] ?? '-',
+            'test1' => $subjectData['test1'] ?? '-'
+        ];
+    }
+
+    // Calculate scores
+    $totalScores = [];
+    foreach ($grades as $subject => $data) {
+        if ($subject !== 'English') {
+            $totalScores[$subject] = $data['test1'];
+        }
+    }
+
+    arsort($totalScores);
+    $bestScores = array_slice($totalScores, 0, 5);
+
+    if (isset($grades['English'])) {
+        $bestScores['English'] = $grades['English']['test1'];
+    }
+
+    $total = array_sum($bestScores);
+    $subcount = 0;
+$class = 1;
+// Step 4: Check each score based on class rules
+foreach ($bestScores as $score) {
+    if ($class == 1 || $class == 2) {
+        if ($score >= 40) {
+            $subcount++;
+        }
+    } elseif ($class == 3 || $class == 4) {
+        if ($score >= 1 && $score <= 8) {
+            $subcount++;
+        }
+    }
+}
+
+// Determine the result
+$result = ($subcount == 6) ? 'PASS' : 'FAIL';
+  // Determine the result based on total score and English grade
+$englishGrade = $grades['English']['grade'];
+$result = ($total < 240 || $englishGrade === 'F') ? 'FAIL' : 'PASS';
+
+// Store the total and result along with grades
+$studentTotals[$studentName] = [
+    'total' => $total,
+    'result' => $result,
+    'grades' => $grades
+];
+
+}
+
+// Sort students by total scores in descending order
+arsort($studentTotals);
+
+$position = 1;
+foreach ($studentTotals as $studentName => $data) {
+    echo "<tr>";
+    echo "<td>" . htmlentities($position) . "</td>";
+    echo "<td>" . htmlentities($studentName) . "</td>";
+
+    foreach ($data['grades'] as $subject => $subjectData) {
+        echo "<td>" . htmlentities($subjectData['grade']) . "</td>";
+    }
+
+    echo "<td>" . htmlentities($data['total']) . "</td>";
+echo "<td>";
+
+if ($data['result'] === 'PASS') {
+    echo '<button class="btn" style="background-color: #003366; color: white; font-weight: bold; border: none; padding: 5px 10px; border-radius: 5px;">';  // Custom blue button for PASS
+    echo 'PASS ✔️';  // Text for PASS
+    echo '</button>';
+} else {
+    echo '<button class="btn btn-sm" style=" background-color: red; color: white;font-weight: bold; padding: 5px 10px; border-radius: 5px;">';  // Red button for FAIL
+    echo 'FAIL ❌';  // Text for FAIL
+    echo '</button>';
+}
+
+echo "</td>";
+
+
+    echo "</tr>";
+
+    $position++;
+}
+?>
+
+        </table>
+    </div></div>
+</div>
+
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- content-wrapper ends -->
+                    <!-- partial:partials/_footer.html -->
+
+                    <!-- partial -->
+                    
+                <!-- main-panel ends -->
+                <?php include_once('includes/footer.php');?>
+                    </div>
+                </div>
+            </div>
+            <!-- page-body-wrapper ends -->
+            </div>
+            <!-- container-scroller -->
+            <!-- plugins:js -->
+            <script src="vendors/js/vendor.bundle.base.js"></script>
+            <!-- endinject -->
+            <!-- Plugin js for this page -->
+            <script src="vendors/select2/select2.min.js"></script>
+            <script src="vendors/typeahead.js/typeahead.bundle.min.js"></script>
+            <!-- End plugin js for this page -->
+            <script>
+        $(document).ready(function(){
+            $("#myInput").on("keyup", function() {
+                var value = $(this).val().toLowerCase();
+                $("#myTable tr").filter(function() {
+                    $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1)
+                });
+            });
+        });
+    </script>
+            <!-- inject:js -->
+            <script src="js/off-canvas.js"></script>
+            <script src="js/misc.js"></script>
+            <!-- endinject -->
+            
+<!-- jQuery and Bootstrap JS -->
+<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+<!-- DataTables JS -->
+<script type="text/javascript" charset="utf8" src="https://cdn.datatables.net/1.10.24/js/jquery.dataTables.js"></script>
+<script>
+
+            <!-- Custom js for this page -->
+            <script src="js/typeahead.js"></script>
+            <script src="js/select2.js"></script>
+            <!-- End custom js for this page -->
+
+                <!-- inject:js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dompdf/0.8.4/dompdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.9.2/html2pdf.bundle.min.js"></script>
+<script>
+    function generatePDF() {
+        const content = document.getElementById('pdf-content'); // Selecting the unique div
+        const options = {
+            margin: 0,
+            filename: '<?php echo "Form 1 Mid term result_" . $academicYear . "_term " . $activeTerm; ?>.pdf', // Filename based on student name, academic year, and term
+            image: {
+                type: 'jpeg',
+                quality: 1
+            },
+            html2canvas: {
+                scale: 3,
+                letterRendering: true
+            },
+            jsPDF: {
+    unit: 'mm',
+    format: 'a3', // or 'A4'
+    orientation: 'landscape' // or 'landscape'
+},
+   // Exclude the button tag and its descendants from the PDF
+            ignoreElements: function (element) {
+                return element.className === 'btn' || element.closest('.btn') !== null;
+            }
+        };
+        html2pdf().set(options).from(content).save(); // Generating PDF from the selected content
+    }
+</script>
+
+            </body>
+            </html>
+         
